@@ -1,0 +1,56 @@
+<html>
+<head>
+<style>
+
+</style>
+
+<script>
+(function(){
+	var foo = {
+		a : 'aaa',
+		b : 'bbb'
+	};
+	var bar = {
+		__proto__ : foo,
+		c : 'ccc',
+		d : 'ddd'
+	}; 
+	Object.defineProperty(bar, 'e', {value:'eee'});
+	Object.defineProperties(bar, {
+		f : {
+			value : 'fff'
+		}, 
+		
+		g : {
+			value : 'ggg',
+			writable : true,
+			enumerable : true,
+			configurable : true
+		},
+		
+		h : {
+			value : 'hhh',
+			writable : false,
+			enumerable : true,
+			configurable : false
+		}		
+	});
+	for(var prop in bar) {
+		console.log('prop : ' + prop);
+		console.log('bar[prop] : ' + bar[prop]);		
+	}
+	console.log('Object.keys(bar) : ' + Object.keys(bar));
+	console.log('Object.getOwnPropertyNames(bar) : ' + Object.getOwnPropertyNames(bar));	
+	
+})();
+</script>
+</head>
+<body>
+	<form>
+	<label>name</label>
+	<input type="text" value="" id="loginInput" name='loginInput'></input>
+	<input type="submit" name="loginBtn" value="login" id="loginBtn"></input>	
+	</form>
+	<script src="app.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>
