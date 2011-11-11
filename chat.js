@@ -2,63 +2,48 @@ var events = require('events');
 var messages = [ ];
 var users = { };
 
-exports = chat;
-// function model(name, msg) {
-// 	if(msg) {
-// 		this.msg = msg;
-// 	}		
-// 	this.timeStamp = new Date();
-// 	this.name = name;
-// }
-function chat() {
+
+function Chat() {
 	events.EventEmitter.call(this);
 }
 
-chat.prototype = {
+Chat.prototype = {
 	__proto__ : events.EventEmitter.prototype,
 	
-	addMsg : function(name, msg) {
+	addMessage : function(name, msg) {
 		// process and emit event
-		var model = {
-			name : name,
-			msg : msg,
-			timeStamp : new Date()
-		};
+		var model = createModel(name, msg);
 		
 		messages.push(model);
 		while(messages.length > 30) {
 			messages.shift();
 		}
+		
 		this.emit('change', model.timeStamp);
 	},
 	
 	leave : function(name) {
-		delete users[name];
-		var model = {
-			name : name,
-			msg : 'leave : ' + name,
-			timeStamp : new Date()
-		}
-		messages.push(model);
-		this.emit('change', model.timeStamp);
+		delete users[name];		
+		this.addMessage(name, name + ' leave');
+		//var model = createModel(name, 'leave : ' + name);
+		//messages.push(model);		
+		//this.emit('change', model.timeStamp);
 	},
 	
 	join : function(name) {
 		// TODO throw error if there is name
 //		var uid = //hash//name;
 		if(users[name]) {
-			this.emit('error');
+			this.emit('error', 'the name is already used');
 			return;			
 		}		
 		users[name] = 1;
-		messages.push({
-			msg : 'new user : ' + name,
-			timeStamp : new Date()			
-		});
-		this.emit('change', new Date());
+		this.addMessage(name, name + ' join');
+//		var model = createModel(name, name + ' join');		
+		//this.emit('change', model.timeStamp);
 	},
 	
-	getJsonSince : function(timeStamp) {
+	getJSONSince : function(timeStamp) {
 		var msgTime;
 		var msgs = [ ];
 		for(var i = messages.length - 1, msg = messages[i]; msg = messages[i] ; --i ) {
@@ -68,9 +53,20 @@ chat.prototype = {
 				break;
 			}
 		}
+		
 		return JSON.stringify(msgs);
 	}
 }
+
+function createModel(name, msg) {
+	return { 
+		name : name,
+		msg : msg,
+		timeStamp : new Date()
+	};
+}
+//module.exports = new events.EventEmitter();
+module.exports = new Chat();
 // chat.on('msg', function() {
 		
 //})

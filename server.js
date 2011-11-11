@@ -2,25 +2,11 @@ var http = require('http'),
 	url = require('url'),
 	path = require('path'),
 	qs = require("querystring"),
+	chat = require('./chat'),	
 	readFileSync = require('fs').readFileSync;
 
 var HOST = 'localhost',
 	PORT = 3000;
-
-var urlMap = {
-	'/' : 'index.html',
-	'/app.js' : 'app.js',
-	'/post' : post,
-	'/login' : login
-}
-
-
-	
-
-var hoge = (function() {
-	
-	
-})();
 
 // for( var url in urlMap) {
 // 	console.log('url : ' + url);
@@ -40,8 +26,32 @@ var hoge = (function() {
 var urlMap = {
 	'/' : staticHanlder.bind(null,'index.html'),
 	'/app.js' : staticHanlder.bind(null,'app.js'),
-	'/post' : post,
-	'/login' : login
+	'/post' : function(req, res) {
+		// id from req
+		// name from id
+		// 
+		var queryObj = qs.parse(url.parse(req.url).query);
+		console.log('queryObj.name : ' + queryObj.name);
+		console.log('queryObj.msg : ' + queryObj.msg);		
+		chat.addMessage(queryObj.name, queryObj.msg);
+		simpleJson(res, { });
+	},
+	
+	'/login' : function(req, res) {
+		// chat.join(qString.name);
+		console.log('login');
+
+		var qString = qs.parse(url.parse(req.url).query);
+		console.log('qString : ' + qString);
+		console.log('qString.name : ' + qString.name);	
+		// chat.getUsers
+		chat.join(qString.name);
+		simpleJson(res, { q : 'this_is_test'});
+	},	
+	
+	'/leave' : function(req, res) {
+		
+	}
 }
 
 function simpleJson (res, obj) {
@@ -50,31 +60,27 @@ function simpleJson (res, obj) {
                       , "Content-Length": body.length
                       });
   res.end(body);
-};
+};	
 
-function post (req, res) {
-	simpleJson(res, { test : 'this_is_test'});	
-}
 
-function login(req, res) {
-	console.log('login');
-	//req.data
-	var qString = qs.parse(url.parse(req.url).query);
-	console.log('qString : ' + qString);
-	console.log('qString.name : ' + qString.name);	
-
-	simpleJson(res, { q : 'this_is_test'});	
-}
-
-var NOT_FOUND = "Not Found\n";
 function notFound(req, res) {
-  res.writeHead(404, { "Content-Type": "text/plain"
+	var NOT_FOUND = "Not Found\n";
+  	res.writeHead(404, { "Content-Type": "text/plain"
                      , "Content-Length": NOT_FOUND.length
                      });
-  res.end(NOT_FOUND);
+  	res.end(NOT_FOUND);
 }
 
 http.createServer(function (req, res) {
+	if (req.headers.accept && req.headers.accept == 'text/event-stream') {
+		if (req.url == '/events') {
+		    sendSSE(req, res);
+		} else {
+			notFound(req, res);
+		}
+		return;
+	} 		
+	
 	if (req.method === "GET" || req.method === "HEAD") {
 		console.log('req.url : ' + req.url);
 		console.log('url.parse(req.url) : ' + url.parse(req.url));		
@@ -84,26 +90,71 @@ http.createServer(function (req, res) {
 		var handler = urlMap[pathName] || notFound;
 		handler(req, res);		
 	}
+	
 }).listen(PORT, HOST);
 console.log('Server running at http://' + HOST);
 
+
+function sendSSE(req, res) {
+ 	res.writeHead(200, {
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		'Connection': 'keep-alive'
+  	});
+
+  	var id = (new Date()).toLocaleTimeString();
+
+  // Sends a SSE every 5 seconds on a single connection.
+  	// setInterval(function() {
+  	// 	console.log('this is Interval : ');		
+  	// 	constructSSE(res, id, (new Date()).toLocaleTimeString());
+  	//   	}, 1000);
+	
+	// register event
+	// var since = new Date();
+	var since = new Date();
+	chat.on('change', function(timeStamp) {
+		var msgs = chat.getJSONSince(since);
+		//res.write('data: ' + msgs);
+		constructSSE(res, id, msgs);
+		since = timeStamp;
+	});
+  	//constructSSE(res, id, (new Date()).toLocaleTimeString());
+}
+
+function constructSSE(res, id, data) {
+  	res.write('id: ' + id + '\n');
+  	res.write("data: " + data + '\n\n');
+}
 
 
 function staticHanlder (fileName, req, res) {
   	var body, 
 		headers,
   		content_type = mime.lookupExtension(path.extname(fileName));
-	console.log('staticHandler');	
+//	console.log('staticHandler');	
 	var buffer = readFileSync(fileName);	
 	body = buffer;
 	headers =  { "Content-Type": content_type,
-               	"Content-Length": body.length
-              };
-	console.log('body.length : ' + body.length);
+               	"Content-Length": body.length };
+//	console.log('body.length : ' + body.length);
 	res.writeHead(200, headers);
 	res.end(req.method === "HEAD" ? "" : body);	
 }
 
+/*
+ *
+ *
+*/
+
+// var net = require('net');
+// 
+// var server = net.createServer(function (socket) {
+//   socket.write("Echo server\r\n");
+//   socket.pipe(socket);
+// });
+// 
+// server.listen(1337, HOST);
 
 
 
