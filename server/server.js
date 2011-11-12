@@ -5,12 +5,14 @@ var http = require('http'),
 	chat = new Chat(),
 	mUtil = require('./mUtil');
 
+
 var HOST = 'localhost',
-	PORT = 3000;
+	PORT = 3000,
+	CLIENT_PATH = __dirname + '/../client';
 
 var urlMap = {
-	'/' : mUtil.staticHanlder.bind(null,'index.html'),
-	'/app.js' : mUtil.staticHanlder.bind(null,'app.js'),
+	'/' : mUtil.staticHanlder.bind(null, CLIENT_PATH +  '/index.html'),
+	'/app.js' : mUtil.staticHanlder.bind(null, CLIENT_PATH + '/app.js'),
 	'/post' : function(req, res) {
 		// id from req
 		// name from id
