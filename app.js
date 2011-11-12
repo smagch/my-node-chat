@@ -28,7 +28,7 @@ function initialize(name) {
 
 eventSource.onmessage = function(e) {
 	//document.body.innerHTML += e.data + '<br>';
-	console.log('e.data : ' + e.data);	
+	console.log('e.data : ' + e.data);
 };
 
 loginBtn.onclick = function(e) {
@@ -86,6 +86,9 @@ window.onsubmit = function(e) {
 	console.log('window.onsubmit');
 }
 
+window.onclose = function(e) {
+	
+}
 
 
 

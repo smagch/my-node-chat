@@ -52,8 +52,7 @@ Chat.prototype = {
 			} else {
 				break;
 			}
-		}
-		
+		}		
 		return JSON.stringify(msgs);
 	}
 }
@@ -65,13 +64,6 @@ function createModel(name, msg) {
 		timeStamp : new Date()
 	};
 }
-//module.exports = new events.EventEmitter();
-module.exports = new Chat();
-// chat.on('msg', function() {
-		
-//})
-// chat.on('leave', function() {
-	
-//})
-//util.inherit( exports , events.EventEmitter);
+
+module.exports = Chat;
 
