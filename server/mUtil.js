@@ -1,4 +1,6 @@
 var path = require('path'),
+	qs = require("querystring"),
+	url = require('url'),	
 	readFileSync = require('fs').readFileSync;
 
 
@@ -27,6 +29,14 @@ module.exports = {
 		res.writeHead(200, { "Content-Type": content_type,
 	               	 		 "Content-Length": body.length });
 		res.end(req.method === "HEAD" ? "" : body);	
+	},
+	
+	getQueryObject : function(reqUrl) {
+		return qs.parse(url.parse(reqUrl).query);
+	},
+	
+	getPathString : function(reqUrl) {
+		return url.parse(reqUrl).pathname;
 	}		
 }
 
