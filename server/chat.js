@@ -47,9 +47,6 @@ function handleSSE(res, model) {
 	  	res.write("data: " + data + '\n\n');
 	}
 	console.log('handleSSE');
-	console.log('name : ' + model.name);
-	console.log('msg : ' + model.msg);
-	// TODO : check id
 
   	// TODO : if there is last-event-id, use getJSONSince
 	// if not, just broadcast message
@@ -59,7 +56,7 @@ function handleSSE(res, model) {
 	constructSSE(res, id, msgs)	
 }
 
-function getId() {
+function getUid() {
 	var id = (Math.random() * 0xFFFFFF << 0 ).toString(32) + 
 			 (Math.random() * 0xFFFFFF << 0 ).toString(32);		
 	if(!sessions[id]) {
@@ -108,8 +105,9 @@ Chat.prototype = {
 		return model.id && sessions[model.id];
 	},
 	
-	addMessage : function(model) {
-		//var model = createModel(name, msg);		
+	addMessage : function(id, msg) {
+		var name = sessions[id].name;		
+		var model = createModel(name, msg);		
 		model.timeStamp = new Date();
 		messages.push(model);
 		while( messages.length > this._limitNumMsg ) {
@@ -130,9 +128,11 @@ Chat.prototype = {
 	removeUser : function(id) {
 		if(sessions[id]) {
 			var name = sessions[id].name;
-			this.addMessage(name, name + ' leave');
+			console.log(name + ' is about to leave');
+			this.addMessage( id , name + ' leave') ;
+			
 			this.removeHandler(id);
-			delete sessions[id];
+			delete sessions[id];						
 		}
 	},
 	
@@ -141,10 +141,10 @@ Chat.prototype = {
 			this.sendFail(res, 'the name is already is used' );
 			return;
 		}
-		var id = getId();				
+		var id = getUid();				
 		sessions[id] = new SessionObject(name);
-		this.addMessage(name, name + ' join');
-		sendSuccessWithId(id, res);				
+		sendSuccessWithId(id, res);	
+		this.addMessage(id, name + ' join');
 	},
 	
 	updateHandler : function(id, req, res) {

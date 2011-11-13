@@ -18,14 +18,14 @@ chatInput.style.display = 'none';
 window.onunload = window.onbeforeunload = function(e) {
 	if(config.isInitialized) {
 		var req = new XMLHttpRequest();
-		req.open('GET', '/leave?name=' + config.name );
+		req.open('GET', '/leave?id=' + config.id );
 		req.send(null);
 	}	
 }
 
 function initialize(id, name) {
 	config.id = id;
-	config.name = name;	
+	config.name = name;
 	config.isInitialized = true;
 	
 	chatInput.style.removeProperty('display');

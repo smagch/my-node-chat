@@ -14,7 +14,7 @@ var urlMap = {
 	'/post' : function(req, res) {
 		var queryObj = mUtil.getQueryObject(req.url);
 		if(chat.isValidModel(queryObj)) {
-			chat.addMessage(queryObj);
+			chat.addMessage(queryObj.id, queryObj.msg);
 			chat.sendSuccess(res);
 		} else {
 			chat.sendFail(res, 'invalid id ' + queryObj.id);
