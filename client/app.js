@@ -5,14 +5,16 @@ var loginBtn = document.querySelector('#loginBtn'),
 	loginInput = document.querySelector('#loginInput'),
 	chatContainer = document.querySelector('#chat_container'),
 	chatInput = document.querySelector('#chat_input');
+// TODO : id
 
 var config = {
 	name : '',
+	id : NaN,
 	isInitialized : false	
 }
 	
 chatInput.style.display = 'none';
-
+// TODO : callback for duplicate name
 window.onunload = window.onbeforeunload = function(e) {
 	if(config.isInitialized) {
 		var req = new XMLHttpRequest();
@@ -21,19 +23,21 @@ window.onunload = window.onbeforeunload = function(e) {
 	}	
 }
 
-function initialize(name) {
+function initialize(id, name) {
+	config.id = id;
+	config.name = name;	
+	config.isInitialized = true;
+	
 	chatInput.style.removeProperty('display');
 	loginBtn.style.display = 'none';
 	loginInput.style.display = 'none';
-	config.name = name;
-	config.isInitialized = true;
 	chatInput.addEventListener('keydown', function(e) {
 		if(e.keyIdentifier === 'Enter') {
 			sendMessage();
 		}
 	}, false);
 	
-	var eventSource = new EventSource('/events?name=' + name);
+	var eventSource = new EventSource('/events?id=' + id);
 	eventSource.onmessage = function(e) {
 		//document.body.innerHTML += e.data + '<br>';
 		// if (e.origin != 'http://example.com') {
@@ -74,7 +78,7 @@ function sendMessage() {
 			}			
 		}
 	}
-	req.open('GET', '/post?msg=' + msg + '&name=' + config.name);
+	req.open('GET', '/post?msg=' + msg + '&id=' + config.id);
 	req.send(null);
 }
 
@@ -85,9 +89,13 @@ function doLogin(name) {
 	req.onreadystatechange = function(e) {
 		console.log('readyState : ' + req.readyState);				
 		if(req.readyState == 4  && req.status == 200) {
-			console.log('req.status : ' + req.status);			
+			console.log('req.status : ' + req.status);		
 			console.log('req.responseText : ' + req.responseText);
-			initialize(name);
+			var responseObj = JSON.parse(req.responseText);
+			if(!responseObj.id) {
+				throw new Error('responseText has no session id')
+			}
+			initialize(responseObj.id, name);
 		}
 	}
 	console.log('doRequest : ' + name);	

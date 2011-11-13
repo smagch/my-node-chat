@@ -17,7 +17,7 @@ var urlMap = {
 			chat.addMessage(queryObj);
 			chat.sendSuccess(res);
 		} else {
-			// TODO error
+			chat.sendFail(res, 'invalid id ' + queryObj.id);
 		}
 	},
 	
@@ -28,40 +28,22 @@ var urlMap = {
 	
 	'/leave' : function(req, res) {		
 		var queryObj = mUtil.getQueryObject(req.url);
-		chat.removeUser(queryObj.name);		
+		chat.removeUser(queryObj.id);		
 	}
 }
 
 var sseMap = {
 	'/events' : function(req, res) {
-		var name = mUtil.getQueryObject(req.url).name;
-		if(!name || !chat.hasSession(name) ) {
-			console.log('invalid name : ' + name);
+		var queryObj = mUtil.getQueryObject(req.url),
+			id = queryObj.id;
+		
+		if( !chat.hasSession(id) ) {
+			console.log('invalid id : ' + id);
 			return;
-		}
-		console.log('valid name : ' + name);
-		
-		
-		function constructSSE(res, id, data) {
-		  	res.write('id: ' + id + '\n');
-		  	res.write("data: " + data + '\n\n');
-		}
-		
-		res.writeHead(200, {
-			'Content-Type': 'text/event-stream',
-			'Cache-Control': 'no-cache',
-			'Connection': 'keep-alive'
-	  	});
+		}		
+		console.log('valid id : ' + id );					
 		// TODO : if there is last-id, 
-		chat.updateHandler(name, req, res);				
-		// 	  	var id = (new Date()).toLocaleTimeString();
-		// var since = new Date();
-		// chat.on('change', function(timeStamp) {
-		// 	var msgs = chat.getJSONSince(since);
-		// 	//res.write('data: ' + msgs);
-		// 	constructSSE(res, id, msgs);
-		// 	since = timeStamp;
-		// });
+		chat.updateHandler(id, req, res);	
 	}
 }
 
@@ -72,16 +54,14 @@ http.createServer(function (req, res) {
 	}
 	function isGetOrHead(method) {
 		return !!{GET : 1 , HEAD : 1}[method];
-	}
-	
-	var handler;
+	}		
+	var pathName = mUtil.getPathString(req.url),
+		handler;
 	if(isSseAccepted(req.headers.accept)) {
-		console.log('isSSE');
-		var pathName = mUtil.getPathString(req.url);
-		handler = sseMap[pathName] || mUtil.notFound;		
+		console.log('isSSE');		
+		handler = sseMap[pathName] || mUtil.notFound;
 	} else if ( isGetOrHead(req.method) ) {		
-		var pathName = mUtil.getPathString(req.url);
-		handler = urlMap[pathName] || mUtil.notFound;		
+		handler = urlMap[pathName] || mUtil.notFound;
 	}
 	handler(req, res);		
 	

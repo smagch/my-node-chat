@@ -1,8 +1,9 @@
 var events = require('events');
 var messages = [ ];
-var users = { };
 
+var sessions = { };
 
+// TODO use session id because someone can push message by false name
 function Chat() {
 	events.EventEmitter.call(this);
 	this._limitNumMsg = 30;
@@ -15,11 +16,30 @@ function createModel(name, msg) {
 		timeStamp : new Date()
 	};
 }
+
 function logModel(model) {
 	console.log('name : ' + model.name);
 	console.log('msg : ' + model.msg);
 	console.log('timeStamp : ' + model.timeStamp);
 }
+
+var SessionObject = (function(){
+	function SessionObject(name) {
+		this.name = name;
+		this.handler = undefined;
+	}
+	SessionObject.prototype = {
+		// set handler( value ) {
+		// 		this._handler = value;
+		// 	},
+		// 
+		// 	get handler() {
+		// 		return this._handler;
+		// 	}
+	}	
+	return SessionObject;
+})();
+
 
 function handleSSE(res, model) {
 	function constructSSE(res, id, data) {
@@ -39,6 +59,34 @@ function handleSSE(res, model) {
 	constructSSE(res, id, msgs)	
 }
 
+function getId() {
+	var id = (Math.random() * 0xFFFFFF << 0 ).toString(32) + 
+			 (Math.random() * 0xFFFFFF << 0 ).toString(32);		
+	if(!sessions[id]) {
+		return id;
+	} else {
+		return getId();
+	}	
+}
+
+function sendSuccessWithId (id, res) {
+	var obj = {id : id};
+	var body = new Buffer(JSON.stringify(obj));
+  	res.writeHead( 200, {
+		"Content-Type": "text/json",
+		"Content-Length": body.length 
+	});
+	res.end(body);
+}
+
+function sendText (code, res, msg) {
+	var body = new Buffer( msg );
+  	res.writeHead( code, {
+		"Content-Type": "text/plain",
+		"Content-Length": body.length 
+	});
+	res.end(body);
+}
 
 
 Chat.prototype = {
@@ -52,12 +100,12 @@ Chat.prototype = {
 		return this._limitNumMsg;
 	},
 	
-	hasSession : function(name) {
-		return !!users[name];
+	hasSession : function(id) {
+		return !!sessions[id];
 	},
 	
 	isValidModel : function(model) {
-		return model.name && users[model.name] && model.msg ;
+		return model.id && sessions[model.id];
 	},
 	
 	addMessage : function(model) {
@@ -66,69 +114,62 @@ Chat.prototype = {
 		messages.push(model);
 		while( messages.length > this._limitNumMsg ) {
 			messages.shift();
-		}		
-		//this.emit('change', model.timeStamp);
-		
+		}			
 		console.log('this.listeners("change").length : ' + this.listeners("change").length);
 		this.emit('change', model);
 	},
 	
-	sendSuccess : function(res) {
-		var body = 'Success';
-	  	res.writeHead( 200, {
-			"Content-Type": "text/json",
-			"Content-Length": body.length 
-		});
-		res.end(body);
+	sendSuccess : function(res, msg) {
+		sendText(200, res, ( msg || 'Success') );
 	},
 	
 	sendFail : function(res, msg) {
-		var body = new Buffer( msg || 'Fail');
-		res.writeHead( 400, {
-			"Content-Type": "text/json",
-			"Content-Length": body.length 
-		});
-		res.end(body);
-	},	
+		sendText(400, res, ( msg || 'Fail') );
+	},
 	
-	removeUser : function(name) {
-		if(users[name]) {
-			delete users[name];		
+	removeUser : function(id) {
+		if(sessions[id]) {
+			var name = sessions[id].name;
 			this.addMessage(name, name + ' leave');
+			this.removeHandler(id);
+			delete sessions[id];
 		}
 	},
 	
 	addUser : function(name, res) {
-		if(!name || users[name]) {			
+		if(!name || sessions[name]) {			
 			this.sendFail(res, 'the name is already is used' );
 			return;
-		}		
-		users[name] = 1;
+		}
+		var id = getId();				
+		sessions[id] = new SessionObject(name);
 		this.addMessage(name, name + ' join');
-		this.sendSuccess(res);				
+		sendSuccessWithId(id, res);				
 	},
 	
-	updateHandler : function(name, req, res) {
+	updateHandler : function(id, req, res) {
 		// TODO : require last event id
-		if(!users[name]) {
+		if(!this.hasSession(id)) {
 			return;
 		}
-		req.once('close', this.removeHandler.bind(this, name) );
-		this.removeHandler(name);	
 		console.log('updateHandler');
+		req.once('close', this.removeHandler.bind(this, id) );		
 		res.writeHead(200, {
 			'Content-Type': 'text/event-stream',
 			'Cache-Control': 'no-cache',
 			'Connection': 'keep-alive'
-	  	});	
-		this.addListener('change', handleSSE.bind(null, res) );		
+	  	});
+		this.removeHandler(id);	
+		var handler = handleSSE.bind(null, res);
+		sessions[id].handler = handler;
+		this.addListener('change', handler);		
 	},	
 	
-	removeHandler : function(name) {		
-		var handler = users[name];
-		if(handler && handler !== 1) {
-			console.log('removeHandler : ' + name );
-			this.removeListener('change', handler );			
+	removeHandler : function(id) {		
+		var sessionObj = sessions[id];
+		if(sessionObj && sessionObj.handler) {
+			console.log('removeHandler : ' + id );
+			this.removeListener('change', sessionObj.handler );
 		}
 	},
 	
