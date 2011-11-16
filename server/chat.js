@@ -1,12 +1,10 @@
 var events = require('events');
-var messages = [ ];
 
-var sessions = { };
-
-// TODO use session id because someone can push message by false name
 function Chat() {
 	events.EventEmitter.call(this);
 	this._limitNumMsg = 30;
+	this._sessions = { };
+	this._messages = [ ];
 }
 
 function createModel(name, msg) {
@@ -58,12 +56,8 @@ function handleSSE(res, model) {
 
 function getUid() {
 	var id = (Math.random() * 0xFFFFFF << 0 ).toString(32) + 
-			 (Math.random() * 0xFFFFFF << 0 ).toString(32);		
-	if(!sessions[id]) {
-		return id;
-	} else {
-		return getId();
-	}	
+			 (Math.random() * 0xFFFFFF << 0 ).toString(32);	
+	return id;	
 }
 
 function sendSuccessWithId (id, res) {
@@ -98,17 +92,18 @@ Chat.prototype = {
 	},
 	
 	hasSession : function(id) {
-		return !!sessions[id];
+		return !!this._sessions[id];
 	},
 	
 	isValidModel : function(model) {
-		return model.id && sessions[model.id];
+		return model.id && this._sessions[model.id];
 	},
 	
 	addMessage : function(id, msg) {
-		var name = sessions[id].name;		
+		var name = this._sessions[id].name;		
 		var model = createModel(name, msg);		
 		model.timeStamp = new Date();
+		var messages = this._messages;
 		messages.push(model);
 		while( messages.length > this._limitNumMsg ) {
 			messages.shift();
@@ -126,23 +121,23 @@ Chat.prototype = {
 	},
 	
 	removeUser : function(id) {
-		if(sessions[id]) {
-			var name = sessions[id].name;
+		if(this._sessions[id]) {
+			var name = this._sessions[id].name;
 			console.log(name + ' is about to leave');
 			this.addMessage( id , name + ' leave') ;
 			
 			this.removeHandler(id);
-			delete sessions[id];						
+			delete this._sessions[id];						
 		}
 	},
 	
 	addUser : function(name, res) {
-		if(!name || sessions[name]) {			
+		if(!name || this._sessions[name]) {			
 			this.sendFail(res, 'the name is already is used' );
 			return;
 		}
 		var id = getUid();				
-		sessions[id] = new SessionObject(name);
+		this._sessions[id] = new SessionObject(name);
 		sendSuccessWithId(id, res);	
 		this.addMessage(id, name + ' join');
 	},
@@ -161,12 +156,12 @@ Chat.prototype = {
 	  	});
 		this.removeHandler(id);	
 		var handler = handleSSE.bind(null, res);
-		sessions[id].handler = handler;
+		this._sessions[id].handler = handler;
 		this.addListener('change', handler);		
 	},	
 	
 	removeHandler : function(id) {		
-		var sessionObj = sessions[id];
+		var sessionObj = this._sessions[id];
 		if(sessionObj && sessionObj.handler) {
 			console.log('removeHandler : ' + id );
 			this.removeListener('change', sessionObj.handler );
@@ -174,7 +169,8 @@ Chat.prototype = {
 	},
 	
 	getJSONSince : function(timeStamp) {
-		var msgs = [ ];
+		var msgs = [ ],
+			messages = this._messages;
 		for(var i = messages.length - 1, msg = messages[i]; msg = messages[i] ; --i ) {
 			if( timeStamp < msg.timeStamp ) {
 				msgs.push(msg);

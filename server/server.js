@@ -3,14 +3,15 @@ var http = require('http'),
 	chat = new Chat(),
 	url = require('url'),	
 	mUtil = require('./mUtil');
-
+// TODO: japanese test
 var HOST = 'localhost',
 	PORT = 3000,
 	CLIENT_PATH = __dirname + '/../client';
 
 var urlMap = {
 	'/' : mUtil.staticHanlder.bind(null, CLIENT_PATH +  '/index.html'),
-	'/app.js' : mUtil.staticHanlder.bind(null, CLIENT_PATH + '/app.js'),
+	'/app.js' : mUtil.staticHanlder.bind(null, CLIENT_PATH + '/app.js'),	
+	'/chatContainer.js' : mUtil.staticHanlder.bind(null, CLIENT_PATH + '/chatContainer.js'),
 	'/post' : function(req, res) {
 		var queryObj = mUtil.getQueryObject(req.url);
 		if(chat.isValidModel(queryObj)) {
